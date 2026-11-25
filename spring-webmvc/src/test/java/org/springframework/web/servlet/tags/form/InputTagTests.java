@@ -296,6 +296,46 @@ class InputTagTests extends AbstractFormTagTests {
 	}
 
 	@Test
+	void withErrorsAndHtmlEscaping() throws Exception {
+		this.tag.setPath("name");
+		this.tag.setCssClass("\"good\"");
+		this.tag.setCssErrorClass("\"bad\"");
+
+		BeanPropertyBindingResult errors = new BeanPropertyBindingResult(this.rob, COMMAND_NAME);
+		errors.rejectValue("name", "some.code", "Default Message");
+		errors.rejectValue("name", "too.short", "Too Short");
+		exposeBindingResult(errors);
+
+		assertThat(this.tag.doStartTag()).isEqualTo(Tag.SKIP_BODY);
+
+		String output = getOutput();
+		assertTagOpened(output);
+		assertTagClosed(output);
+
+		assertContainsAttribute(output, "type", getType());
+		assertValueAttribute(output, "Rob");
+		assertContainsAttribute(output, "class", "&quot;bad&quot;");
+	}
+
+	@Test
+	void withCssClassAndCssStyleHtmlEscaping() throws Exception {
+		this.tag.setPath("name");
+		this.tag.setCssClass("x\" onmouseover=\"alert(1)");
+		this.tag.setCssStyle("y\" onfocus=\"alert(2)");
+
+		assertThat(this.tag.doStartTag()).isEqualTo(Tag.SKIP_BODY);
+
+		String output = getOutput();
+		assertTagOpened(output);
+		assertTagClosed(output);
+
+		assertContainsAttribute(output, "class", "x&quot; onmouseover=&quot;alert(1)");
+		assertContainsAttribute(output, "style", "y&quot; onfocus=&quot;alert(2)");
+		assertThat(output).doesNotContain("onmouseover=\"alert(1)\"");
+		assertThat(output).doesNotContain("onfocus=\"alert(2)\"");
+	}
+
+	@Test
 	void disabledFalse() throws Exception {
 		this.tag.setPath("name");
 		this.tag.setDisabled(false);
